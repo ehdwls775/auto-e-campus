@@ -15,10 +15,16 @@ if __name__ == '__main__':
 
     ecampus = ec('e-campus')
 
-    if len(sys.argv) > 1 and sys.argv[1] == 'headless':
-        ecampus.create_headless_browser()
-    else:
+    address_mode = False
+
+    if len(sys.argv) < 2:
         ecampus.create_browser()
+    else:
+        if sys.argv[1] == 'headless':
+            ecampus.create_headless_browser()
+        elif sys.argv[1] == 'address':
+            address_mode = True
+            ecampus.create_headless_browser()
 
     ecampus.init_identification(id.username, id.password)
 
@@ -29,5 +35,8 @@ if __name__ == '__main__':
         print('failed to sign in')
         exit(300)
 
-    ecampus.start_watch()
+    if address_mode:
+        ecampus.get_addresses()
+    else:
+        ecampus.start_watch()
 
