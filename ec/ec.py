@@ -2,6 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import re
 import time
+import json
 
 
 class ec:
@@ -330,6 +331,140 @@ class ec:
 
                     self.log('progress : {0}'.format(pt2.text))
                     time.sleep(self.refresh_delay)
+
+        self.log('scheduling done!')
+        self.driver.quit()
+
+    def get_addresses(self):
+        is_watching_video = False
+
+        # create schedule
+        self.log('crawling lectures to build schedules...')
+        self.open_lecture_list_page()
+
+        self.log('lecture count : {0}'.format(self.get_lecture_count()))
+        lecture_count = self.get_lecture_count()
+        for i in range(1, lecture_count + 1):
+
+            self.open_lecture_list_page()
+
+            lecture_info = {'semester': self.get_lecture_semester(i), 'college': self.get_lecture_college(i),
+                            'association': self.get_lecture_association(i), 'name': self.get_lecture_name(i),
+                            'online': self.get_lecture_online(i), 'professor': self.get_lecture_professor(i),
+                            'exam': self.get_lecture_exam(i), 'class_name': self.get_lecture_parsed_name(i)[0],
+                            'class_code': self.get_lecture_parsed_name(i)[1],
+                            'videos': [], }
+
+            self.driver.implicitly_wait(1)
+            self.move_to_lecture(i)
+            table = self.driver.find_elements_by_xpath('//*[@id="con"]/table/tbody/tr')
+
+            week = 0
+            times = 1
+
+            indexes = []
+
+            # video info crawl logic
+            for j in range(1, len(table) + 1):
+                childs = self.driver.find_elements_by_xpath('//*[@id="con"]/table/tbody/tr[{0}]/td'.format(j))
+
+                if len(childs) < 2:
+                    week += 1
+                    times = 1
+                    continue
+                else:
+                    indexes.append(j)
+                    times += 1
+
+            vs = lecture_info['videos']
+
+            self.log('start watching : {0}'.format(lecture_info['class_name']))
+
+            json_name = lecture_info['class_name'].replace(' ', '').replace('[', '').replace(']', '')
+            json_file_name = 'rtmp_{0}.json'.format(json_name)
+
+            linkes = {}
+
+            try:
+                with open(json_file_name) as json_file_read:
+                    linkes = json.load(json_file_read)
+            except:
+                pass
+
+            current_week = 0
+            current_time = 0
+
+            # videos play logic
+            for index in indexes:
+
+                xxp = '//*[@id="con"]/table/tbody/tr[{0}]/td[5]'.format(index)
+                pt = self.safe_find_element_by_xpath(xxp).text
+
+                txp = '//*[@id="con"]/table/tbody/tr[{0}]/td[3]'.format(index)
+                tt = self.safe_find_element_by_xpath(xxp).text
+
+                # 링크가 없을 때 만
+                if pt == '' or pt is None:
+                    self.log('no video skip : [{0}] {1}'.format(lecture_info['class_name'], tt))
+                    continue
+
+                wxp = '//*[@id="con"]/table/tbody/tr[{0}]/td[6]/a[1]'.format(index)
+                open_video = self.safe_find_element_by_xpath(wxp, False)
+
+                if open_video is None:
+                    self.log('no video link : [{0}] {1}'.format(lecture_info['class_name'], tt))
+                    continue
+
+                ttp = '//*[@id="con"]/table/tbody/tr[{0}]/th'.format(index)
+                ttts = self.safe_find_element_by_xpath(ttp)
+
+                if ttts is None:
+                    continue
+
+                ttt = str(ttts.text)
+
+                if ttt[0] == '1':
+                    current_week += 1
+
+                current_time = int(ttt[0])
+
+                # 키가 있는 경우는 스킵
+                key = '{0}_{1}'.format(current_week, current_time)
+                if key in linkes.keys() and linkes[key] != None and linkes[key] != '':
+                    continue
+
+                mw = self.driver.current_window_handle
+
+                self.log('open video : [{0}] {1}'.format(lecture_info['class_name'], tt))
+
+                # 열기
+                open_video.click()
+                self.driver.implicitly_wait(1)
+
+                time.sleep(1)
+
+                window_popup = self.driver.window_handles[1]
+                self.driver.switch_to.window(window_popup)
+                source = self.driver.page_source
+
+                # convert to regex
+                begin = str(source).find('rtmp://')
+                end = str(source).find('media.mp4')
+
+                key = '{0}_{1}'.format(current_week, current_time)
+                link = source[begin:end + 9]
+
+                if link is not None and len(link) > 0:
+                    self.log('{0} : {1}'.format(key, link))
+                    linkes[key] = link
+
+                self.driver.switch_to.window(mw)
+
+                time.sleep(1)
+
+
+            with open(json_file_name, 'w') as json_file:
+                json.dump(linkes, json_file, indent=4)
 
         self.log('scheduling done!')
         self.driver.quit()
