@@ -45,5 +45,5 @@ python study.py address
 
 - just execute address.bat file
 
-then, `rtmp_{{ lecture.name }}.json'` will be created at `/auto-e-campus/rtmp_xxx.json`
-open json with any text editor and [download with FFMPEG](https://github.com/yoolisel/download-flow-player-rtmp)
+then, `rtmp_{{ lecture.name }}.json'` will be created at `/auto-e-campus/rtmp_xxx.json`  
+open json with any text editor and [download with FFMPEG](https://github.com/yoolisel/download-flow-player-rtmp)  
