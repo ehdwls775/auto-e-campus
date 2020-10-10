@@ -144,6 +144,11 @@ class ec:
         print('=' * 24)
         self.close_all_popups()
 
+        self.driver.find_element_by_xpath('//*[@id="ko"]/img').click()
+        self.driver.implicitly_wait(self.wait_time)
+
+        self.close_all_popups()
+
     def open_lecture_list_page(self):
         self.move_page(ec.URI_LECTURE)
         self.close_all_popups()
@@ -165,6 +170,7 @@ class ec:
         self.close_popup('//*[@id="change_close"]/span')  # password change
         self.close_popup('//*[@id="close_14261406"]/img')  # mid term notice
         self.close_popup('//*[@id="close_18271279"]/img')  # manual for student
+        self.close_popup('//*[@id="close_14297619"]/img')  # notice
 
     def safe_find_element_by_xpath(self, xpath, logging=True):
         try:
@@ -265,6 +271,9 @@ class ec:
             week = 0
             times = 1
 
+            current_week = 0
+            current_time = 0
+
             indexes = []
 
             # video info crawl logic
@@ -280,38 +289,54 @@ class ec:
                     times += 1
 
             vs = lecture_info['videos']
+            lecture_name = lecture_info['class_name'].replace(' ', '').replace('[', '').replace(']', '')
 
-            self.log('start watching : {0}'.format(lecture_info['class_name']))
+            self.log('강의 보기 시작 : {0}'.format(lecture_name))
 
             # videos play logic
             for index in indexes:
-                xxp = '//*[@id="con"]/table/tbody/tr[{0}]/td[5]'.format(index)
-                pt = self.safe_find_element_by_xpath(xxp).text
+                status_xpath = '//*[@id="con"]/table/tbody/tr[{0}]/td[5]'.format(index)
+                status_text = self.safe_find_element_by_xpath(status_xpath).text
 
-                txp = '//*[@id="con"]/table/tbody/tr[{0}]/td[3]'.format(index)
-                tt = self.safe_find_element_by_xpath(xxp).text
+                attendance_admit_xpath = '//*[@id="con"]/table/tbody/tr[{0}]/td[3]'.format(index)
+                atten_admit_text = self.safe_find_element_by_xpath(attendance_admit_xpath).text
 
-                if pt == '출석완료':
-                    self.log('already completed : [{0}] {1}'.format(lecture_info['class_name'], tt))
+                if status_text == '출석완료' or status_text == 'Complete':
+                    self.log('already completed : [{0}] {1}'.format(lecture_name, atten_admit_text))
                     continue
-                elif pt == '' or pt is None:
-                    self.log('no video skip : [{0}] {1}'.format(lecture_info['class_name'], tt))
+                elif status_text == '' or status_text is None:
+                    self.log('no video skip : [{0}] {1}'.format(lecture_name, atten_admit_text))
                     continue
-                elif pt == '결석':
-                    self.log('outdated : [{0}] {1}'.format(lecture_info['class_name'], tt))
+                elif status_text == '결석':
+                    self.log('outdated : [{0}] {1}'.format(lecture_name, atten_admit_text))
                     continue
 
-                wxp = '//*[@id="con"]/table/tbody/tr[{0}]/td[6]/a[1]'.format(index)
-                open_video = self.safe_find_element_by_xpath(wxp, False)
+                video_link_xpath = '//*[@id="con"]/table/tbody/tr[{0}]/td[6]/a[1]'.format(index)
+                open_video = self.safe_find_element_by_xpath(video_link_xpath, False)
 
-                if open_video is None:
+                if open_video is None or open_video.text != '강의보기':
 
-                    self.log('no video link : [{0}] {1}'.format(lecture_info['class_name'], tt))
+                    self.log('비디오 링크가 없음: [{0}] {1}'.format(lecture_name, atten_admit_text))
                     continue
+                else:
+                    self.log('비디오 링크 : {0}'.format(open_video.text))
+
+                hours_xpath = '//*[@id="con"]/table/tbody/tr[{0}]/th'.format(index)
+                hours_element = self.safe_find_element_by_xpath(hours_xpath)
+
+                if hours_element is None:
+                    continue
+
+                hours_text = str(hours_element.text)
+
+                if hours_text[0] == '1':
+                    current_week += 1
+
+                current_time = int(hours_text[0])
 
                 mw = self.driver.current_window_handle
 
-                self.log('open video : [{0}] {1}'.format(lecture_info['class_name'], tt))
+                self.log('open video : [{0}] {1} {2}_{3}'.format(lecture_name, atten_admit_text,current_week, current_time))
 
                 open_video.click()
                 self.driver.implicitly_wait(1)
@@ -321,12 +346,12 @@ class ec:
                     self.driver.refresh()
                     self.driver.implicitly_wait(1)
 
-                    pt2 = self.safe_find_element_by_xpath(xxp)
+                    pt2 = self.safe_find_element_by_xpath(status_xpath)
                     if pt2 is None or pt2.text == '':
                         continue
 
                     if pt2.text == '출석완료' or pt2.text == '결석':
-                        self.log('done! move to next video : [{0}] {1}'.format(lecture_info['class_name'], tt))
+                        self.log('done! move to next video : [{0}] {1}'.format(lecture_info['class_name'], atten_admit_text))
                         break
 
                     self.log('progress : {0}'.format(pt2.text))
