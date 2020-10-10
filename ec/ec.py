@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import re
+import sys
 import time
 import json
 
@@ -61,7 +62,7 @@ class ec:
 
     def log(self, msg):
         if self.logging:
-            print('{0}::{1}'.format(self.name, msg))
+            print('{0} :: {1}'.format(self.name, msg))
 
     def init_browser(self, headless):
 
@@ -295,31 +296,6 @@ class ec:
 
             # videos play logic
             for index in indexes:
-                status_xpath = '//*[@id="con"]/table/tbody/tr[{0}]/td[5]'.format(index)
-                status_text = self.safe_find_element_by_xpath(status_xpath).text
-
-                attendance_admit_xpath = '//*[@id="con"]/table/tbody/tr[{0}]/td[3]'.format(index)
-                atten_admit_text = self.safe_find_element_by_xpath(attendance_admit_xpath).text
-
-                if status_text == '출석완료' or status_text == 'Complete':
-                    self.log('already completed : [{0}] {1}'.format(lecture_name, atten_admit_text))
-                    continue
-                elif status_text == '' or status_text is None:
-                    self.log('no video skip : [{0}] {1}'.format(lecture_name, atten_admit_text))
-                    continue
-                elif status_text == '결석':
-                    self.log('outdated : [{0}] {1}'.format(lecture_name, atten_admit_text))
-                    continue
-
-                video_link_xpath = '//*[@id="con"]/table/tbody/tr[{0}]/td[6]/a[1]'.format(index)
-                open_video = self.safe_find_element_by_xpath(video_link_xpath, False)
-
-                if open_video is None or open_video.text != '강의보기':
-
-                    self.log('비디오 링크가 없음: [{0}] {1}'.format(lecture_name, atten_admit_text))
-                    continue
-                else:
-                    self.log('비디오 링크 : {0}'.format(open_video.text))
 
                 hours_xpath = '//*[@id="con"]/table/tbody/tr[{0}]/th'.format(index)
                 hours_element = self.safe_find_element_by_xpath(hours_xpath)
@@ -334,9 +310,35 @@ class ec:
 
                 current_time = int(hours_text[0])
 
+                status_xpath = '//*[@id="con"]/table/tbody/tr[{0}]/td[5]'.format(index)
+                status_text = self.safe_find_element_by_xpath(status_xpath).text
+
+                attendance_admit_xpath = '//*[@id="con"]/table/tbody/tr[{0}]/td[3]'.format(index)
+                atten_admit_text = self.safe_find_element_by_xpath(attendance_admit_xpath).text
+
+                if status_text == '출석완료' or status_text == 'Complete':
+                    self.log('[{0}] {1}주차 {2}회차 출석완료'.format(lecture_name, current_week, current_time))
+                    continue
+                elif status_text == '' or status_text is None:
+                    self.log('[{0}] {1}주차 {2}회차 강의 없음'.format(lecture_name, current_week, current_time))
+                    continue
+                elif status_text == '결석':
+                    self.log('[{0}] {1}주차 {2}회차 강의 결석'.format(lecture_name, current_week, current_time))
+                    continue
+
+                video_link_xpath = '//*[@id="con"]/table/tbody/tr[{0}]/td[6]/a[1]'.format(index)
+                open_video = self.safe_find_element_by_xpath(video_link_xpath, False)
+
+                if open_video is None or open_video.text != '강의보기':
+
+                    self.log('비디오 링크가 없음: [{0}] {1}'.format(lecture_name, atten_admit_text))
+                    continue
+                else:
+                    self.log('비디오 링크 : {0}'.format(open_video.text))
+
                 mw = self.driver.current_window_handle
 
-                self.log('open video : [{0}] {1} {2}_{3}'.format(lecture_name, atten_admit_text,current_week, current_time))
+                self.log('강의 보기 시작 : [{0}] {1} {2}_{3}'.format(lecture_name, atten_admit_text,current_week, current_time))
 
                 open_video.click()
                 self.driver.implicitly_wait(1)
@@ -351,10 +353,14 @@ class ec:
                         continue
 
                     if pt2.text == '출석완료' or pt2.text == '결석':
-                        self.log('done! move to next video : [{0}] {1}'.format(lecture_info['class_name'], atten_admit_text))
+                        self.log('강의 수강 완료 : [{0}] {1}'.format(lecture_info['class_name'], atten_admit_text))
                         break
 
-                    self.log('progress : {0}'.format(pt2.text))
+                    progress_text = '[{0}] : {1}'.format(lecture_name, pt2.text)
+
+                    # sys.stdout.write("\033[F")
+                    print('e-campus :: ' + progress_text, end="\r")
+                    # self.log('progress : {0}'.format(pt2.text))
                     time.sleep(self.refresh_delay)
 
         self.log('scheduling done!')
