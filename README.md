@@ -1,6 +1,8 @@
 # Auto E-Campus
 
 [![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fyoolisel%2Fauto-e-campus&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false)](https://github.com/yoolisel/auto-e-campus)
+  
+Contact : yoolisel@gmail.com
 
 ## 왜
 2020년을 맞이해 대부분의 것들이 비대면으로 전환되었습니다. 회사에서는 재택근무를 시행하고, 학교 역시 줌 서비스 등을 이용한 비대면 온라인 클래스를 운영하고 있습니다. 하지만 대 국립 경상대학교의 E 캠퍼스 시스템은 멍청하게도 오래되고 구닥다리의 rtmp 기반 웹 플레이어를 사용하고 있습니다. 그래서 학습의 효율성 증대를 위해 온라인 클래스를 다운로드해 배속으로 시청하고, 출석은 자동으로 진행하기로 결정했습니다.
